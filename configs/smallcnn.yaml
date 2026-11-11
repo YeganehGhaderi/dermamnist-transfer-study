@@ -1,0 +1,13 @@
+# Experiment A: sanity run, plain cross-entropy, horizontal flip only.
+# Write numbers with a dot (1.0e-3, not 1e-3): PyYAML reads "1e-3" as a string.
+name: smallcnn
+model: smallcnn
+data_root: data
+img_size: 64
+augment: hflip
+batch_size: 128
+num_workers: 2
+max_epochs: 40
+lr: 1.0e-3
+weight_decay: 1.0e-4
+patience: 8

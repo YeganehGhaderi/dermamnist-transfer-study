@@ -1,0 +1,22 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install CPU-only PyTorch (much smaller than the CUDA build)
+        run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - name: Install the package and the other dependencies
+        run: |
+          pip install numpy scikit-learn pandas matplotlib pyyaml pytest pillow
+          pip install -e .
+      - name: Run tests
+        run: pytest -q

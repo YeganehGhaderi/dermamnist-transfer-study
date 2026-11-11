@@ -1,0 +1,11 @@
+name: resnet18_scratch
+model: resnet18_scratch
+data_root: data
+img_size: 64
+augment: hflip
+batch_size: 128
+num_workers: 2
+max_epochs: 40
+lr: 1.0e-3
+weight_decay: 1.0e-4
+patience: 8
