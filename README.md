@@ -14,7 +14,7 @@ DermaMNIST (MedMNIST v3, from HAM10000), 64×64 RGB, official train / val / test
 ## Models
 | Model | Parameters | Initialization |
 |---|---|---|
-| SmallCNN (3 conv blocks + GAP) | _fill in_ | random |
+| SmallCNN (3 conv blocks + GAP) | 288K | random |
 | ResNet-18 | 11.18 M | random |
 | ResNet-18 | 11.18 M | ImageNet |
 
