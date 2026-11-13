@@ -6,3 +6,4 @@ data/
 *.pt
 *.npz
 results/runs/
+.venv/

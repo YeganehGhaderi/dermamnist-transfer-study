@@ -9,6 +9,7 @@ the same command again and it continues where it stopped.
     python scripts/sweep.py --configs configs/expC_*.yaml --seeds 0 1 2 --set loss=focal ...
 """
 import argparse
+import glob
 import os
 import subprocess
 import sys
@@ -27,8 +28,10 @@ def main():
     parser.add_argument("--suffix", default="", help="added to every run name, e.g. _frac10")
     args = parser.parse_args()
 
+    # Windows' cmd does not expand "configs/expB_*.yaml" by itself, so we do it here
+    config_paths = sorted({p for pattern in args.configs for p in (glob.glob(pattern) or [pattern])})
     jobs = []
-    for cfg_path in sorted(args.configs):
+    for cfg_path in config_paths:
         with open(cfg_path) as f:
             name = yaml.safe_load(f)["name"] + args.suffix
         for seed in args.seeds:
