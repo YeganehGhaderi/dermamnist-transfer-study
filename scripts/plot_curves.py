@@ -23,7 +23,7 @@ def main():
         line, = axes[0].plot(h["epoch"], h["train_loss"], label=f"{name} train")
         axes[0].plot(h["epoch"], h["val_loss"], "--", color=line.get_color(), label=f"{name} val")
         axes[1].plot(h["epoch"], h["val_macro_f1"], color=line.get_color(), label=name)
-    axes[0].set(xlabel="epoch", ylabel="cross-entropy loss", title="Loss (solid: train, dashed: val)")
+    axes[0].set(xlabel="epoch", ylabel="loss", title="Loss (solid: train loss, dashed: val cross-entropy)")
     axes[1].set(xlabel="epoch", ylabel="Macro-F1", title="Validation Macro-F1")
     for ax in axes:
         ax.legend(fontsize=7)

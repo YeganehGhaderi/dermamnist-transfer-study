@@ -15,6 +15,7 @@ import yaml
 
 from derma.data import make_loaders
 from derma.engine import EarlyStopping, evaluate, train_one_epoch
+from derma.losses import build_criterion
 from derma.metrics import compute_metrics
 from derma.models import build_model, count_parameters, param_groups
 from derma.utils import get_device, save_json, set_seed
@@ -26,12 +27,20 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out_dir", default="results/runs")
     parser.add_argument("--data_root", default=None, help="overrides data_root in the config")
+    parser.add_argument("--set", nargs="*", default=[], metavar="KEY=VALUE",
+                        help="override config values, e.g. --set loss=focal augment=full")
+    parser.add_argument("--name", default=None, help="overrides the run name in the config")
     args = parser.parse_args()
 
     with open(args.config) as f:
         cfg = yaml.safe_load(f)
     if args.data_root:
         cfg["data_root"] = args.data_root
+    for item in args.set:                       # "loss=focal" -> cfg["loss"] = "focal"
+        key, value = item.split("=", 1)
+        cfg[key] = yaml.safe_load(value)        # turns "60" into 60 and "0.1" into 0.1
+    if args.name:
+        cfg["name"] = args.name
     cfg["seed"] = args.seed
 
     run_dir = os.path.join(args.out_dir, f"{cfg['name']}_seed{args.seed}")
@@ -48,7 +57,10 @@ def main():
     model = build_model(cfg["model"]).to(device)
     print(f"parameters: {count_parameters(model):,}")
 
-    criterion = nn.CrossEntropyLoss()
+    # training loss: plain / weighted cross-entropy or Focal Loss, depending on the config
+    criterion = build_criterion(cfg, train_loader.dataset.labels, device)
+    # validation loss is ALWAYS plain cross-entropy, so runs with different training losses compare fairly
+    eval_criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(
         param_groups(model, cfg["model"], cfg["lr"], cfg.get("lr_backbone", cfg["lr"])),
         weight_decay=cfg["weight_decay"],
@@ -67,7 +79,7 @@ def main():
         t0 = time.time()
         lr_now = optimizer.param_groups[-1]["lr"]   # lr of the head (the larger one)
         train_loss = train_one_epoch(model, train_loader, criterion, optimizer, scaler, device)
-        val_loss, val_logits, val_labels = evaluate(model, val_loader, criterion, device)
+        val_loss, val_logits, val_labels = evaluate(model, val_loader, eval_criterion, device)
         m = compute_metrics(val_logits, val_labels)
         scheduler.step()
 
@@ -90,7 +102,7 @@ def main():
     # ----- reload the best checkpoint, save its val logits and a summary -----
     ckpt = torch.load(os.path.join(run_dir, "best.pt"), map_location=device)
     model.load_state_dict(ckpt["model"])
-    _, val_logits, val_labels = evaluate(model, val_loader, criterion, device)
+    _, val_logits, val_labels = evaluate(model, val_loader, eval_criterion, device)
     np.savez(os.path.join(run_dir, "val_logits.npz"), logits=val_logits, labels=val_labels)
     summary = {"best_epoch": ckpt["epoch"], "epochs_run": epoch,
                "params": count_parameters(model), **{f"val_{k}": v for k, v in

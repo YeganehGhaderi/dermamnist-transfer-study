@@ -1,0 +1,16 @@
+# Experiment B: class-imbalance strategies on the pretrained ResNet-18.
+# Everything is identical to experiment A except the loss / sampler.
+name: expB_oversample
+model: resnet18_pretrained
+lr: 1.0e-3          # new classification head
+lr_backbone: 1.0e-4 # pretrained layers
+data_root: data
+img_size: 64
+batch_size: 128
+num_workers: 2
+weight_decay: 1.0e-4
+patience: 8
+augment: hflip
+max_epochs: 40
+loss: ce
+sampler: oversample

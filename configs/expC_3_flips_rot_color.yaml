@@ -1,0 +1,16 @@
+# Experiment C: cumulative augmentation ablation (level 3 of 4) on the pretrained ResNet-18.
+# The imbalance strategy is the winner of experiment B, passed with --set (e.g. --set loss=focal).
+name: expC_3_flips_rot_color
+model: resnet18_pretrained
+lr: 1.0e-3          # new classification head
+lr_backbone: 1.0e-4 # pretrained layers
+data_root: data
+img_size: 64
+batch_size: 128
+num_workers: 2
+weight_decay: 1.0e-4
+patience: 8
+augment: flips_rot_color
+max_epochs: 40
+loss: ce
+sampler: shuffle

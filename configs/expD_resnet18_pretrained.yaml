@@ -1,0 +1,16 @@
+# Experiment D: final comparison of the three models with the best recipe from B and C,
+# passed with --set (e.g. --set loss=focal augment=full). 60 epochs so SmallCNN can finish learning.
+name: expD_resnet18_pretrained
+model: resnet18_pretrained
+lr: 1.0e-3          # new classification head
+lr_backbone: 1.0e-4 # pretrained layers
+data_root: data
+img_size: 64
+batch_size: 128
+num_workers: 2
+weight_decay: 1.0e-4
+patience: 8
+augment: hflip
+max_epochs: 60
+loss: ce
+sampler: shuffle
