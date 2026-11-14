@@ -1,0 +1,5 @@
+name,seeds,best_epoch,val_macro_f1,val_macro_f1_std,val_balanced_acc,val_balanced_acc_std,val_auc_macro,val_auc_macro_std,val_accuracy,val_accuracy_std
+expB_ce,3,15.6667,0.6738,0.006,0.656,0.0048,0.9443,0.0032,0.8129,0.0015
+expB_weighted_ce,3,14.6667,0.6715,0.0259,0.6697,0.0175,0.9399,0.0057,0.7936,0.0137
+expB_focal,3,13.0,0.6611,0.0195,0.6276,0.0238,0.9395,0.0044,0.8036,0.0065
+expB_oversample,3,20.6667,0.6659,0.0112,0.6241,0.0148,0.9454,0.0024,0.8013,0.0282

@@ -1,0 +1,4 @@
+name,seeds,best_epoch,val_macro_f1,val_macro_f1_std,val_balanced_acc,val_balanced_acc_std,val_auc_macro,val_auc_macro_std,val_accuracy,val_accuracy_std
+expD_smallcnn,3,10.6667,0.4465,0.0128,0.5531,0.049,0.9027,0.0131,0.5912,0.0242
+expD_resnet18_scratch,3,15.6667,0.5223,0.036,0.5896,0.0303,0.9206,0.0058,0.6856,0.0341
+expD_resnet18_pretrained,3,23.0,0.6841,0.0122,0.6896,0.017,0.9404,0.0064,0.8066,0.0127
