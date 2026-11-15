@@ -368,8 +368,82 @@ validation of Grad-CAM explanations.
   lesion-independent evaluation. This study does not reconstruct
   a lesion-level split, and its test results should be interpreted
   with this limitation in mind.
-  https://www.nature.com/articles/s41597-025-04382-5?utm_source=chatgpt.com
+  - https://www.nature.com/articles/s41597-025-04382-5?utm_source=chatgpt.com
 
 - **No clinical use:** This is an educational and experimental
   machine-learning study, not a clinically validated diagnostic tool.
 
+## Dataset Integrity and Lesion-Level Data Leakage
+
+### Research Background
+
+This project uses **DermaMNIST**, a lightweight dermatological image classification dataset derived from HAM10000. DermaMNIST was introduced as part of the MedMNIST benchmark collection, which provides standardized, lightweight datasets for medical image classification research.
+
+Relevant foundational works include:
+
+- Tschandl et al. (2018), [The HAM10000 dataset: A large collection of multi-source dermatoscopic images of common pigmented skin lesions](https://doi.org/10.1038/sdata.2018.161).
+- Yang et al. (2021), [MedMNIST Classification Decathlon: A Lightweight AutoML Benchmark for Medical Image Analysis](https://doi.org/10.1109/ISBI48211.2021.9434062).
+- Yang et al. (2023), [MedMNIST v2 – A large-scale lightweight benchmark for 2D and 3D biomedical image classification](https://doi.org/10.1038/s41597-022-01721-8).
+
+An important dataset-quality issue was subsequently reported by Abhishek, Jain, and Hamarneh (2025) in their paper:
+
+**[Investigating the Quality of DermaMNIST and Fitzpatrick17k Dermatological Image Datasets](https://doi.org/10.1038/s41597-025-04382-5)**, published in *Scientific Data*.
+
+The authors identified substantial lesion-level overlap across the original DermaMNIST training, validation, and test partitions. Their analysis found that:
+
+- 1,006 out of 7,470 unique lesions (approximately 13.47%) appeared in more than one partition.
+- 886 images belonging to 641 lesions overlapped between training and test sets.
+- 440 images belonging to 332 lesions overlapped between training and validation sets.
+- 128 images belonging to 113 lesions overlapped between validation and test sets.
+
+This is a form of **lesion-level data leakage**. Multiple images of the same physical lesion may show similar visual characteristics. Consequently, a model may encounter images of a lesion during training and then be evaluated on other images of that same lesion during testing.
+
+As a result, performance on the original image-level test split may not fully represent generalization to previously unseen lesions.
+
+### Corrected Dataset Versions
+
+To address these issues, Abhishek et al. (2025) introduced two alternative datasets:
+
+- **DermaMNIST-C:** A corrected version designed to eliminate lesion-level overlap between training, validation, and test partitions. Images belonging to lesions already represented in the training set are moved from validation and test into training.
+- **DermaMNIST-E:** An extended and more challenging version that uses HAM10000 for training and the ISIC 2018 validation and test partitions for evaluation.
+
+The authors also provide the corresponding dataset files and analysis code:
+
+- [Corrected Skin Image Datasets – GitHub](https://github.com/kakumarabhishek/Corrected-Skin-Image-Datasets)
+- [Dataset and supplementary files – Zenodo](https://doi.org/10.5281/zenodo.12739457)
+- [Research project website](https://derm.cs.sfu.ca/critique/)
+
+An important consideration is that the corrected versions have different partition sizes and compositions from the original DermaMNIST. Therefore, their benchmark results should not be interpreted as a strictly controlled, one-to-one comparison with results obtained using the original partitions.
+
+### Motivation for an Additional Experiment
+
+The initial experiments in this repository use the original DermaMNIST split:
+
+| Partition | Number of images |
+|---|---:|
+| Training | 7,007 |
+| Validation | 1,003 |
+| Test | 2,005 |
+| **Total** | **10,015** |
+
+The available preprocessed data file contains images and class labels, but does not preserve the original image filenames or lesion IDs. Therefore, lesion-level grouping cannot be reconstructed directly from this file.
+
+Rather than discarding the completed experiments, this project retains the original results as a baseline and introduces a separate experiment using the corrected DermaMNIST-C dataset.
+
+The additional experiment is intended to:
+
+1. Evaluate model performance under a dataset partitioning strategy designed to prevent lesion-level overlap.
+2. Investigate how the corrected partitioning affects generalization performance.
+3. Examine whether the conclusions from the original experiments remain consistent under this alternative evaluation setting.
+4. Provide a more transparent assessment of the limitations of image-level evaluation in dermatological image classification.
+
+The original and corrected experiments will be reported separately. Since their training and evaluation partitions differ, differences in performance will be interpreted cautiously rather than attributed exclusively to the removal of data leakage.
+
+**Status:** The original experiments have been completed. The independent experiment using DermaMNIST-C is planned and will be reported separately after dataset preparation and evaluation.
+
+### References
+
+1. Tschandl, P., Rosendahl, C., & Kittler, H. (2018). The HAM10000 dataset. *Scientific Data*, 5. https://doi.org/10.1038/sdata.2018.161
+2. Yang, J., Shi, R., & Ni, B. (2021). MedMNIST Classification Decathlon. *IEEE ISBI*. https://doi.org/10.1109/ISBI48211.2021.9434062
+3. Yang, J. et al. (2023). MedMNIST v2. *Scientific Data*, 10, 41. https://doi.org/10.1038/s41597-022-01721-8
+4. Abhishek, K., Jain, A., & Hamarneh, G. (2025). Investigating the Quality of DermaMNIST and Fitzpatrick17k Dermatological Image Datasets. *Scientific Data*, 12, 196. https://doi.org/10.1038/s41597-025-04382-5
