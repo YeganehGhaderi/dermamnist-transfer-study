@@ -1,7 +1,10 @@
 # Does ImageNet pretraining help on small, imbalanced medical images? A study on DermaMNIST
 
-> **Status.** Experiments A–E, final test-set evaluation,
-> calibration, and Grad-CAM analysis are complete.
+> **Status:** Completed — v1.0.
+> Experiments A–E, final test-set evaluation,
+> validation-fitted temperature scaling,
+> and Grad-CAM analysis are complete.
+> All automated tests pass, and the final
 > The project is being prepared for its v1.0 release.
 
 **Question.** On DermaMNIST (7 skin-lesion classes, highly imbalanced), how do a small custom CNN, a ResNet-18 trained from scratch and an ImageNet-pretrained ResNet-18 compare? Which imbalance strategy works best, which augmentations help, is the model's confidence trustworthy (calibration), and where does it look (Grad-CAM)?
