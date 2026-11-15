@@ -1,6 +1,8 @@
 # Does ImageNet pretraining help on small, imbalanced medical images? A study on DermaMNIST
 
-> **Status.** Validation-set experiments A–E are complete. Final test-set evaluation, final calibration (temperature fitted on validation, measured on test) and the Grad-CAM figures are still to come.
+> **Status.** Experiments A–E, final test-set evaluation,
+> calibration, and Grad-CAM analysis are complete.
+> The project is being prepared for its v1.0 release.
 
 **Question.** On DermaMNIST (7 skin-lesion classes, highly imbalanced), how do a small custom CNN, a ResNet-18 trained from scratch and an ImageNet-pretrained ResNet-18 compare? Which imbalance strategy works best, which augmentations help, is the model's confidence trustworthy (calibration), and where does it look (Grad-CAM)?
 
@@ -215,4 +217,159 @@ python scripts/sweep.py --configs configs/expD_resnet18_scratch.yaml configs/exp
 python scripts/sweep.py --configs configs/expD_resnet18_scratch.yaml configs/expD_resnet18_pretrained.yaml --seeds 0 1 --data_root data --out_dir results/runs --suffix _frac50 --set loss=weighted_ce augment=flips train_fraction=0.5
 ```
 Summary tables of all experiments are in `results/`; model checkpoints are not committed.
+
+## Test Results
+
+All final evaluations were performed on the official DermaMNIST
+test split (2,005 images). Model configurations and hyperparameters
+were frozen before test evaluation. Each experiment was evaluated
+using three seeds, and results are reported as mean ± standard deviation.
+
+### 1. Model comparison
+
+| Model | Macro-F1 | Balanced Acc. | Macro AUC | Accuracy |
+|---|---:|---:|---:|---:|
+| SmallCNN | 0.436 ± 0.017 | 0.548 ± 0.025 | 0.890 ± 0.006 | 0.586 ± 0.017 |
+| ResNet-18 (scratch) | 0.520 ± 0.045 | 0.604 ± 0.045 | 0.922 ± 0.010 | 0.688 ± 0.024 |
+| ResNet-18 (ImageNet) | **0.692 ± 0.003** | **0.693 ± 0.011** | **0.950 ± 0.004** | **0.806 ± 0.004** |
+
+All three models use weighted cross-entropy and horizontal/vertical
+flips. The comparison uses the settings selected for the pretrained
+model, rather than separately optimized settings for each architecture.
+
+### 2. Class-imbalance strategies
+
+| Strategy | Macro-F1 | Balanced Acc. | Macro AUC | Accuracy |
+|---|---:|---:|---:|---:|
+| Cross-entropy | 0.640 ± 0.023 | 0.620 ± 0.026 | 0.947 ± 0.002 | **0.808 ± 0.008** |
+| Weighted CE | **0.656 ± 0.011** | **0.662 ± 0.013** | 0.941 ± 0.002 | 0.790 ± 0.002 |
+| Focal Loss | 0.610 ± 0.004 | 0.585 ± 0.007 | 0.946 ± 0.003 | 0.793 ± 0.006 |
+| Oversampling | 0.632 ± 0.006 | 0.598 ± 0.022 | 0.942 ± 0.005 | 0.793 ± 0.020 |
+
+Weighted CE achieves the highest mean Macro-F1 and balanced accuracy,
+although the experiment uses only three seeds.
+
+### 3. Augmentation ablation
+
+| Augmentation | Macro-F1 | Balanced Acc. | Macro AUC | Accuracy |
+|---|---:|---:|---:|---:|
+| None | 0.624 ± 0.018 | 0.616 ± 0.015 | 0.933 ± 0.001 | 0.792 ± 0.007 |
+| Flips | **0.691 ± 0.004** | 0.707 ± 0.017 | **0.951 ± 0.004** | **0.802 ± 0.011** |
+| Flips + rotation | 0.643 ± 0.016 | 0.707 ± 0.005 | 0.948 ± 0.003 | 0.773 ± 0.011 |
+| Flips + rotation + colour jitter | 0.648 ± 0.004 | **0.721 ± 0.002** | 0.949 ± 0.001 | 0.757 ± 0.006 |
+| Full augmentation | 0.623 ± 0.047 | 0.714 ± 0.030 | 0.944 ± 0.006 | 0.723 ± 0.039 |
+
+The augmentation levels are cumulative. Stronger augmentation improves
+recall for some minority classes, but reduces majority-class recall.
+
+### 4. Melanoma performance
+
+For the final pretrained ResNet-18, melanoma recall is
+**0.553 ± 0.047**.
+
+The row-normalized confusion matrix shows that approximately 55% of
+true melanoma images are correctly classified, while 28% are
+misclassified as melanocytic nevi (`nv`).
+
+This highlights an important limitation: a strong overall Macro-F1
+does not necessarily imply reliable detection of every clinically
+important class.
+
+![Test confusion matrix](figures/test_confusion_pretrained.png)
+
+Per-class recall across imbalance strategies:
+
+![Test recall by imbalance strategy](figures/test_recall_by_imbalance.png)
+
+### 5. Calibration
+
+Temperature scaling was fitted using validation logits only and
+evaluated on the test set.
+
+| Strategy | T | ECE before | ECE after | Rare-class gap before | Rare-class gap after |
+|---|---:|---:|---:|---:|---:|
+| Cross-entropy | 2.452 ± 0.211 | 0.129 ± 0.006 | 0.019 ± 0.004 | 0.243 ± 0.043 | 0.037 ± 0.041 |
+| Weighted CE | 2.116 ± 0.057 | 0.127 ± 0.005 | 0.026 ± 0.002 | 0.257 ± 0.019 | 0.105 ± 0.018 |
+| Focal Loss | 1.327 ± 0.112 | 0.066 ± 0.006 | 0.025 ± 0.007 | 0.136 ± 0.046 | 0.062 ± 0.051 |
+| Oversampling | 2.319 ± 0.676 | 0.122 ± 0.032 | 0.025 ± 0.001 | 0.205 ± 0.028 | 0.023 ± 0.042 |
+
+Temperature scaling substantially reduces test ECE without changing
+the predicted class labels.
+
+The rare-class confidence gap is the mean confidence minus accuracy
+among predictions assigned to the rare classes (`akiec`, `bcc`, `df`,
+and `vasc`). Positive values indicate over-confidence under this
+definition.
+
+![Test reliability diagrams](figures/test_reliability_imbalance.png)
+
+The reliability diagrams show seed 0; the table reports mean ±
+standard deviation over three seeds.
+
+### 6. Grad-CAM
+
+Grad-CAM visualizations were generated using `layer3`, which provides
+a 4×4 activation map for 64×64 inputs.
+
+The figures compare pretrained and scratch ResNet-18 predictions
+on test images that the pretrained model classifies correctly
+and incorrectly.
+
+![Grad-CAM correct predictions](figures/gradcam_correct.png)
+
+![Grad-CAM incorrect predictions](figures/gradcam_wrong.png)
+
+A random-weights sanity check was also performed on 200 test images.
+The mean Spearman correlation between trained-model and random-model
+maps was -0.013 (median -0.049).
+
+Some maps were constant, producing undefined correlations. Therefore,
+this result should be interpreted cautiously rather than as definitive
+validation of Grad-CAM explanations.
+
+![Grad-CAM sanity check](figures/gradcam_sanity_check.png)
+
+### Main Findings
+
+1. ImageNet pretraining consistently improved performance, with the
+   pretrained ResNet-18 achieving a test Macro-F1 of 0.692 ± 0.003,
+   compared with 0.520 ± 0.045 for training from scratch.
+
+2. Weighted cross-entropy achieved the highest mean Macro-F1 and
+   balanced accuracy among the tested imbalance strategies, but did
+   not substantially improve melanoma recall.
+
+3. Horizontal and vertical flips were the most effective augmentation
+   strategy for Macro-F1, while stronger augmentation increased
+   minority-class recall at the expense of majority-class performance.
+
+4. Temperature scaling substantially reduced test ECE when fitted
+   on validation data, although calibration performance varied
+   across training strategies.
+
+5. Despite strong aggregate performance, melanoma recall remained
+   limited (0.553 ± 0.047), and Grad-CAM results should be interpreted
+   as qualitative explanations rather than clinical evidence.
+
+## Limitations
+
+- **Low image resolution:** Images are resized to 64×64 pixels,
+  which may remove fine-grained lesion details.
+
+- **Dataset scope:** Experiments are conducted on a single dataset,
+  DermaMNIST, and results may not generalize to other dermatological
+  datasets or imaging settings.
+
+- **Potential lesion-level data leakage:** DermaMNIST is derived
+  from HAM10000, where multiple images can correspond to the same
+  physical lesion. A 2025 dataset-quality study reported overlap
+  of lesion IDs across the standard DermaMNIST partitions.
+  Therefore, the official image-level split may not guarantee
+  lesion-independent evaluation. This study does not reconstruct
+  a lesion-level split, and its test results should be interpreted
+  with this limitation in mind.
+  https://www.nature.com/articles/s41597-025-04382-5?utm_source=chatgpt.com
+
+- **No clinical use:** This is an educational and experimental
+  machine-learning study, not a clinically validated diagnostic tool.
 
