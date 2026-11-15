@@ -11,7 +11,7 @@ Everything is written in plain PyTorch: training loop, early stopping, Focal Los
 2. **Pretraining is worth more than 4× the data.** A pretrained ResNet-18 trained on 25% of the training set (≈1,750 images) scores 0.583, above the scratch model trained on 100% (0.522). The gap to scratch does not shrink as data grows (+0.09 at 10%, +0.11 at 25% and 50%, +0.16 at 100%).
 3. **No imbalance strategy beat plain cross-entropy on Macro-F1.** Weighted CE, Focal Loss and oversampling are all within noise of the baseline (0.661–0.674).
 4. **Flips matter, stronger augmentation trades precision for recall.** Adding flips raises Macro-F1 from 0.635 to 0.685. Rotation, colour jitter and zoom lower Macro-F1 but raise balanced accuracy and rare-class recall, at the cost of recall on the majority class.
-5. **The fine-tuned model is over-confident, and the amount depends on the loss.** ECE on validation is 0.127 with cross-entropy and 0.039 with Focal Loss. Temperature scaling brings every method to about 0.02–0.03 without changing a single prediction (optimistic: temperature fitted and measured on the same set; see Calibration).
+5. **The fine-tuned model is over-confident, and the amount depends on the loss (preliminary, single-seed, validation-only).** ECE on validation is 0.127 with cross-entropy and 0.039 with Focal Loss. Temperature scaling brings every method to about 0.02–0.03 without changing a single prediction (optimistic: temperature fitted and measured on the same set; see Calibration).
 
 ## Data
 DermaMNIST (MedMNIST v3, from HAM10000), 64×64 RGB, official train / val / test split.
@@ -101,13 +101,13 @@ Per-class recall (mean over 3 seeds):
 
 Five cumulative levels. Imbalance strategy: **weighted cross-entropy** for all levels, chosen after B because it gave the best balanced accuracy and the best recall on the rarest classes (its Macro-F1 difference from plain cross-entropy was within noise).
 
-| Level | Adds | Macro-F1 | Balanced acc. | Accuracy | Best epoch |
-|---|---|---:|---:|---:|---:|
-| 0 none | – | 0.635 ± 0.013 | 0.614 ± 0.008 | 0.784 ± 0.007 | 17.7 |
-| 1 flips | horizontal + vertical flip | **0.685 ± 0.021** | 0.698 ± 0.010 | **0.797 ± 0.016** | 23.3 |
-| 2 flips_rot | rotation (any angle) | 0.663 ± 0.011 | 0.729 ± 0.015 | 0.763 ± 0.006 | 30.0 |
-| 3 flips_rot_color | mild brightness / contrast / saturation / hue jitter | 0.649 ± 0.008 | **0.731 ± 0.021** | 0.753 ± 0.006 | 30.0 |
-| 4 full | random zoom (80–100%) | 0.627 ± 0.013 | 0.710 ± 0.011 | 0.707 ± 0.022 | 30.3 |
+| Level | Adds | Macro-F1 | Balanced acc. | AUC (macro) | Accuracy | Best epoch |
+|---|---|---:|---:|---:|---:|---:|
+| 0 none | – | 0.635 ± 0.013 | 0.614 ± 0.008 | 0.936 ± 0.003 | 0.784 ± 0.007 | 17.7 |
+| 1 flips | horizontal + vertical flip | **0.685 ± 0.021** | 0.698 ± 0.010 | **0.943 ± 0.006** | **0.797 ± 0.016** | 23.3 |
+| 2 flips_rot | rotation (any angle) | 0.663 ± 0.011 | 0.729 ± 0.015 | 0.941 ± 0.008 | 0.763 ± 0.006 | 30.0 |
+| 3 flips_rot_color | mild brightness / contrast / saturation / hue jitter | 0.649 ± 0.008 | **0.731 ± 0.021** | 0.941 ± 0.005 | 0.753 ± 0.006 | 30.0 |
+| 4 full | random zoom (80–100%) | 0.627 ± 0.013 | 0.710 ± 0.011 | 0.938 ± 0.006 | 0.707 ± 0.022 | 30.3 |
 
 Recall of selected classes:
 
@@ -163,6 +163,7 @@ Stratified subsets of the training set (class proportions preserved, identical f
 1. **Pretrained is better at every size.** A pretrained model with 25% of the data (0.583) already beats the scratch model with all of it (0.522).
 2. **The scratch model plateaus** between 50% and 100% (0.519 vs 0.522), while the pretrained model keeps improving.
 3. **The initial hypothesis (pretraining matters most when data is scarcest) is not supported:** the gap does not shrink with more data in the range tested. With 2 seeds and standard deviations up to 0.05, the gaps at 10%, 25% and 50% are not distinguishable from each other.
+4. **At 10% data, the two models have nearly identical AUC (0.858 vs 0.859) but very different Macro-F1 (0.484 vs 0.398).** This suggests that with very little data, the bottleneck is not pattern recognition but calibration — both models "know" the right class similarly well, but the pretrained model sets better decision thresholds.
 
 ### Calibration (single seed, validation set)
 
@@ -174,6 +175,10 @@ Pretrained ResNet-18, seed 0, one run per strategy from experiment B. Temperatur
 | Weighted CE | 2.16 | 0.128 | 0.021 |
 | Oversampling | 1.54 | 0.085 | 0.028 |
 | Focal Loss | 1.23 | **0.039** | 0.032 |
+
+![calibration](figures/calibration_all_strategies.png)
+
+*Reliability diagrams for each strategy after temperature scaling. Bars show actual accuracy in each confidence bin, the dashed line is perfect calibration. All four strategies reach ECE ≈ 0.02–0.03 after temperature scaling.*
 
 **Observations**
 1. **The model is strongly over-confident.** With cross-entropy, nearly all reliability-diagram bars lie below the diagonal and no prediction has confidence below 0.33. This is the calibration problem predicted by the validation-loss behaviour in experiment A.
@@ -204,5 +209,10 @@ python scripts/summarize.py --runs_dir results/runs --names expB_ce expB_weighte
 # C and D use --set to fix the settings chosen earlier
 python scripts/sweep.py --configs configs/expC_*.yaml --seeds 0 1 2 --data_root data --out_dir results/runs --set loss=weighted_ce
 python scripts/sweep.py --configs configs/expD_*.yaml --seeds 0 1 2 --data_root data --out_dir results/runs --set loss=weighted_ce augment=flips
+# experiment E: data fraction (2 seeds, only the two ResNet-18s)
+python scripts/sweep.py --configs configs/expD_resnet18_scratch.yaml configs/expD_resnet18_pretrained.yaml --seeds 0 1 --data_root data --out_dir results/runs --suffix _frac10 --set loss=weighted_ce augment=flips train_fraction=0.1
+python scripts/sweep.py --configs configs/expD_resnet18_scratch.yaml configs/expD_resnet18_pretrained.yaml --seeds 0 1 --data_root data --out_dir results/runs --suffix _frac25 --set loss=weighted_ce augment=flips train_fraction=0.25
+python scripts/sweep.py --configs configs/expD_resnet18_scratch.yaml configs/expD_resnet18_pretrained.yaml --seeds 0 1 --data_root data --out_dir results/runs --suffix _frac50 --set loss=weighted_ce augment=flips train_fraction=0.5
 ```
 Summary tables of all experiments are in `results/`; model checkpoints are not committed.
+
