@@ -163,7 +163,7 @@ Stratified subsets of the training set (class proportions preserved, identical f
 1. **Pretrained is better at every size.** A pretrained model with 25% of the data (0.583) already beats the scratch model with all of it (0.522).
 2. **The scratch model plateaus** between 50% and 100% (0.519 vs 0.522), while the pretrained model keeps improving.
 3. **The initial hypothesis (pretraining matters most when data is scarcest) is not supported:** the gap does not shrink with more data in the range tested. With 2 seeds and standard deviations up to 0.05, the gaps at 10%, 25% and 50% are not distinguishable from each other.
-4. **At 10% data, the two models have nearly identical AUC (0.858 vs 0.859) but very different Macro-F1 (0.484 vs 0.398).** This suggests that with very little data, the bottleneck is not pattern recognition but calibration — both models "know" the right class similarly well, but the pretrained model sets better decision thresholds.
+4. **At 10% data, AUC is almost identical for the two models (0.858 vs 0.859) while Macro-F1 differs (0.484 vs 0.398).** AUC only measures how well each class is ranked, whereas Macro-F1 depends on the final arg-max decisions, which AUC does not capture. We did not investigate the cause and claim no explanation; with only 2 seeds the standard deviations are large (up to ±0.04 in F1 and ±0.023 in AUC for the pretrained model).
 
 ### Calibration (single seed, validation set)
 
@@ -178,7 +178,7 @@ Pretrained ResNet-18, seed 0, one run per strategy from experiment B. Temperatur
 
 ![calibration](figures/calibration_all_strategies.png)
 
-*Reliability diagrams for each strategy after temperature scaling. Bars show actual accuracy in each confidence bin, the dashed line is perfect calibration. All four strategies reach ECE ≈ 0.02–0.03 after temperature scaling.*
+*Reliability diagrams after temperature scaling (validation set, seed 0; T is fitted and measured on the same images, so the result is optimistic). Bars show the actual accuracy in each confidence bin, the dashed line is perfect calibration. All four strategies reach ECE ≈ 0.02–0.03.*
 
 **Observations**
 1. **The model is strongly over-confident.** With cross-entropy, nearly all reliability-diagram bars lie below the diagonal and no prediction has confidence below 0.33. This is the calibration problem predicted by the validation-loss behaviour in experiment A.
