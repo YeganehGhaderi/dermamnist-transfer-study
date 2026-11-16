@@ -73,6 +73,7 @@ sel = torch.arange(200)
 cam_t, _ = explain(pre, X[sel])
 cam_r, _ = explain(rand, X[sel])
 rho = [spearmanr(a.ravel(), b.ravel())[0] for a, b in zip(cam_t, cam_r)]
+print("undefined correlations:", int(np.isnan(rho).sum()), "of", len(rho))
 print(f"\nSanity check on 200 test images: mean Spearman correlation between the maps of the "
       f"trained and the random model = {np.nanmean(rho):.3f} (median {np.nanmedian(rho):.3f})")
 
